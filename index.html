@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather Lab · NGUYEN HUY HUNG · Đại học Bách khoa Hà Nội</title>
+<meta name="description" content="Website thời tiết của NGUYEN HUY HUNG, Đại học Bách khoa Hà Nội. Thu thập và hiển thị dữ liệu thời tiết theo tọa độ; tải CSV.">
+<meta name="author" content="NGUYEN HUY HUNG">
+<link rel="icon" href="./logo_hust.jpg" type="image/jpeg">
+<link rel="stylesheet" href="./style.css"><script src="./weather-api.js" defer></script><script src="./app.js" defer></script>
+</head>
+<body>
+<header class="university-header">
+  <div class="university-identity">
+    <img class="university-logo" src="./logo_hust.jpg" alt="Logo Đại học Bách khoa Hà Nội" width="49" height="72">
+    <div class="university-text">
+      <p class="university-name">ĐẠI HỌC BÁCH KHOA HÀ NỘI</p>
+      <p class="university-name-en">Hanoi University of Science and Technology</p>
+    </div>
+  </div>
+  <div class="student-identity">
+    <span class="student-label">Người thực hiện</span>
+    <strong class="student-name">NGUYEN HUY HUNG</strong>
+    <span class="student-program">CTTT Hệ thống điện &amp; Năng lượng tái tạo · Khóa 2023</span>
+  </div>
+</header>
+<main>
+<section class="intro"><p class="eyebrow">WEATHER LAB · DỮ LIỆU THỜI TIẾT</p><h1>Từ tọa độ đến dữ liệu.</h1><p>Nhiệt độ, độ ẩm và bức xạ mặt trời tại địa điểm bạn chọn.</p></section>
+<div class="workspace">
+<aside>
+<form id="location-form">
+<h2>Chọn tỉnh / thành phố</h2>
+<label for="place-search">Tên địa điểm tại Việt Nam</label>
+<input id="place-search" type="search" placeholder="Ví dụ: Hà Nội, Đà Nẵng…" minlength="2" maxlength="80" autocomplete="off" required>
+<button id="search-place" class="secondary location-search-button" type="submit">Tìm địa điểm</button>
+<p id="place-status" class="hint" role="status" aria-live="polite">Nhập tên có dấu hoặc không dấu rồi tìm.</p>
+<div id="place-options" hidden>
+<label for="place-select">Chọn kết quả phù hợp</label>
+<select id="place-select"><option value="">— Chọn địa điểm —</option></select>
+</div>
+<p id="selected-place" class="selected-place">Địa điểm mặc định: Hà Nội</p>
+<p class="hint">Số liệu tại điểm tọa độ được chọn, không phải trung bình toàn tỉnh/thành phố.</p>
+</form>
+<div class="divider"></div>
+<form id="query-form">
+<h2>Tọa độ khảo sát</h2>
+<label for="latitude">Vĩ độ <span>−90 đến 90</span></label>
+<input id="latitude" name="latitude" type="number" min="-90" max="90" step="any" value="21.0285" required>
+<label for="longitude">Kinh độ <span>−180 đến 180</span></label>
+<input id="longitude" name="longitude" type="number" min="-180" max="180" step="any" value="105.8542" required>
+<p class="hint">Tọa độ tự điền khi chọn địa điểm. Bạn có thể chỉnh thủ công.</p>
+<div class="divider"></div>
+<h2>Khoảng thời gian</h2>
+<label for="past_days">Số ngày quá khứ</label>
+<input id="past_days" name="past_days" type="number" min="0" max="92" step="1" value="7" required>
+<p class="hint">0–92 ngày trước hôm nay.</p>
+<label for="forecast_days">Số ngày dự báo</label>
+<input id="forecast_days" name="forecast_days" type="number" min="0" max="16" step="1" value="3" required>
+<p class="hint">0–16 ngày, tính cả hôm nay theo múi giờ địa điểm. Chọn ít nhất một ngày.</p>
+<button id="submit" type="submit">Lấy dữ liệu</button>
+</form>
+<details class="help"><summary>Cách đọc dữ liệu</summary><p>Nhiệt độ và độ ẩm ở độ cao 2 m. Bức xạ mặt trời GHI là tổng bức xạ sóng ngắn trên mặt phẳng ngang, trung bình trong giờ trước đó (W/m²).</p><p>Dữ liệu quá khứ là dữ liệu mô hình lưu trữ, không phải phép đo trực tiếp tại tọa độ. Dự báo có thể thay đổi sau mỗi lần cập nhật.</p></details>
+</aside>
+<section class="results" aria-label="Kết quả thời tiết">
+<div id="status" role="status" aria-live="polite">Nhấn “Lấy dữ liệu” để bắt đầu.</div>
+<div id="error" class="error" role="alert" hidden></div>
+<div id="output" hidden>
+<div class="result-heading"><div><p class="eyebrow">KẾT QUẢ KHẢO SÁT</p><h2 id="location"></h2></div><button id="download" class="secondary" type="button">Tải CSV ↓</button></div>
+<p id="metadata" class="metadata"></p>
+<div class="metrics">
+<article><span>Số giờ dữ liệu</span><strong id="count">—</strong><small id="period-count"></small></article>
+<article><span>Nhiệt độ trung bình</span><strong id="temperature">—</strong><small>Trong khoảng đã chọn</small></article>
+<article><span>Độ ẩm trung bình</span><strong id="humidity">—</strong><small>Trong khoảng đã chọn</small></article>
+<article><span>Bức xạ lớn nhất</span><strong id="radiation">—</strong><small>Giá trị trung bình giờ cao nhất</small></article>
+</div>
+<div class="chart-heading"><h2>Diễn biến theo giờ</h2><span>Di chuột / chạm để xem giá trị</span></div>
+<div class="legend"><span>Đường liền: quá khứ mô hình</span><span>Đường đứt: hôm nay & dự báo</span></div>
+<div class="charts" id="charts"></div>
+<div class="table-heading"><h2>Bảng dữ liệu</h2><span id="table-count"></span></div>
+<div class="table-wrap"><table><thead><tr><th>Giờ địa phương</th><th>Loại dữ liệu</th><th>Nhiệt độ (°C)</th><th>Độ ẩm (%)</th><th>Bức xạ (W/m²)</th></tr></thead><tbody id="table-body"></tbody></table></div>
+<nav class="pagination" aria-label="Phân trang dữ liệu"><button id="prev" class="secondary" type="button">← Trước</button><span id="page-label"></span><button id="next" class="secondary" type="button">Sau →</button></nav>
+</div>
+<div id="empty" class="empty"><strong>Ba đại lượng. Một bộ dữ liệu.</strong><p>Chọn vị trí và khoảng thời gian để xem biểu đồ, bảng số liệu và tải về CSV.</p></div>
+</section>
+</div>
+<section class="csv-note"><h2>Tại sao dùng CSV?</h2><p>CSV lưu dữ liệu dạng bảng trong một file văn bản nhẹ, dễ chia sẻ và đọc bằng Excel, Python hoặc MATLAB. Tên cột ghi rõ đơn vị; thời gian được xuất theo UTC kèm tên múi giờ để tránh nhầm lẫn. CSV chỉ lưu dữ liệu, không giữ biểu đồ hay định dạng giao diện.</p></section>
+<footer>Nguồn: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener">Open-Meteo</a> · Địa danh: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><span>Open-Meteo · GitHub Pages · Xuất CSV</span></footer>
+</main>
+</body>
+</html>
