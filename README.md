@@ -1,31 +1,62 @@
-# Weather Lab — GitHub Pages
+# Weather Lab
 
-Website thời tiết tiếng Việt, chạy bằng HTML/CSS/JavaScript. Giữ tìm địa điểm Việt Nam, nhập tọa độ, biểu đồ, bảng phân trang và tải CSV. Không cần Python, máy chủ riêng hoặc API key.
+Ứng dụng Python thu thập và hiển thị dữ liệu thời tiết theo tọa độ.
 
-## Đưa web lên GitHub
+## Mục tiêu
 
-1. Tạo repository Public trên GitHub, ví dụ `weather-project`.
-2. Chọn **Add file → Upload files**. Tải toàn bộ nội dung thư mục này lên repository, để `index.html` nằm ngay ở thư mục gốc. Không tải file ZIP lên thay cho mã nguồn.
-3. Chọn **Commit changes**.
-4. Mở **Settings → Pages → Build and deployment**.
-5. Ở **Source**, chọn **Deploy from a branch**; chọn nhánh **main**, thư mục **/(root)** rồi **Save**.
-6. Đợi GitHub triển khai. Link website hiển thị trong Settings → Pages, thường là `https://TEN-GITHUB.github.io/weather-project/`.
+Ứng dụng đáp ứng các yêu cầu chính của bài tập:
 
-Khi cập nhật các file trên nhánh đã chọn, GitHub Pages sẽ triển khai lại.
+- Thu thập nhiệt độ, độ ẩm tương đối và cường độ bức xạ mặt trời từ nguồn dữ liệu mở Open-Meteo.
+- Cho phép nhập vĩ độ, kinh độ, số ngày dữ liệu quá khứ và số ngày dự báo.
+- Hiển thị dữ liệu trên website bằng biểu đồ, số liệu tổng hợp và bảng dữ liệu theo giờ.
+- Cho phép tải toàn bộ bộ dữ liệu đang hiển thị dưới dạng file `.csv`.
+- Cho phép chia sẻ website trong cùng mạng LAN/Wi-Fi để nhiều người dùng cùng truy cập.
 
-Hướng dẫn chính thức: https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site
+## Công nghệ
 
-## Chạy thử
+- Python standard library: máy chủ HTTP, gọi API, kiểm tra dữ liệu, cache và tạo CSV.
+- HTML/CSS/JavaScript: giao diện, biểu đồ SVG, phân trang và thao tác tải file.
+- Open-Meteo Forecast API: dữ liệu thời tiết theo giờ.
+- Open-Meteo Geocoding API: tìm địa điểm Việt Nam và điền tọa độ.
+- Git/GitHub: lưu trữ và quản lý mã nguồn.
 
-Mở `index.html` bằng trình duyệt hiện đại, có kết nối Internet. Hoặc chạy máy chủ tĩnh từ thư mục này: `python -m http.server 8000`, rồi mở `http://localhost:8000`.
+## Chạy bản Python trên máy
 
-## Cách hoạt động
+Cài Python 3.10 trở lên và mở terminal trong thư mục chứa `app.py`:
 
-- `weather-api.js` gọi trực tiếp Open-Meteo, kiểm tra dữ liệu, lưu đệm trong phiên tối đa 10 phút và tạo CSV từ đúng bộ dữ liệu đang hiển thị.
-- `app.js` quản lý giao diện, biểu đồ, phân trang và hủy yêu cầu cũ khi thay đổi tìm kiếm.
-- Đường dẫn tài nguyên tương đối nên dùng được cả website gốc lẫn website trong thư mục repository.
-- CSV có UTF-8 BOM để Excel đọc tiếng Việt; giá trị thiếu để trống và thời gian xuất theo UTC kèm tên múi giờ.
-- Dữ liệu quá khứ là dữ liệu mô hình, không phải đo trực tiếp. API công cộng có thể giới hạn truy cập; trang sẽ báo lỗi khi yêu cầu thất bại.
-- Bản này đã chuyển phần xử lý Python sang JavaScript. Nếu bài nộp yêu cầu có Python, cần giữ riêng bản dự án Python gốc.
+```bash
+python app.py
+```
 
-Nguồn: https://open-meteo.com/en/docs — địa danh: https://www.geonames.org/.
+Mở `http://localhost:8000`.
+
+Để chia sẻ nội bộ cho người dùng cùng mạng LAN hoặc Wi-Fi:
+
+```bash
+python app.py --lan
+```
+
+Dùng địa chỉ IP và cổng được in trong terminal, ví dụ `http://192.168.1.10:8000`. Máy chạy Python phải tiếp tục bật và có Internet để gọi Open-Meteo.
+
+## CSV được dùng để làm gì?
+
+CSV phù hợp với dữ liệu thời tiết vì dữ liệu có dạng bảng: mỗi dòng là một thời điểm và các cột là nhiệt độ, độ ẩm, bức xạ cùng thông tin nguồn. File nhỏ, dễ chia sẻ và mở được bằng Excel, Google Sheets, Python, MATLAB, R hoặc Power BI. CSV giữ dữ liệu và đơn vị nhưng không giữ biểu đồ hay định dạng giao diện.
+
+## Phiên bản trực tuyến
+
+GitHub Pages chỉ chạy được file tĩnh HTML/CSS/JavaScript, nên không chạy `app.py`. Bản Python được triển khai như một Web Service trên Render:
+
+- Website Python: https://weather-lab-huyhung-python.onrender.com/
+- Nhánh mã nguồn: `python-backend`
+- Build command: `python -m pip install -r requirements.txt`
+- Start command: `python app.py --lan --port $PORT`
+
+Bản Render phù hợp để chia sẻ qua Internet. Bản chạy `--lan` phù hợp để chia sẻ nội bộ trong cùng mạng.
+
+## Kiểm thử
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Các kiểm thử bao gồm kiểm tra giới hạn tọa độ và số ngày, dữ liệu thiếu, mốc ngày theo múi giờ, cache, API route và CSV.
