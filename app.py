@@ -189,10 +189,15 @@ def get_snapshot(params):
         if cached and now - cached[0] < CACHE_SECONDS and cached[1] in SNAPSHOTS:
             return SNAPSHOTS[cached[1]][1]
     result = normalise(fetch_provider(params), params)
+    return save_snapshot(result, key)
+
+
+def save_snapshot(result, key=None):
     result['id'] = uuid.uuid4().hex
     with LOCK:
         SNAPSHOTS[result['id']] = (time.time(), result)
-        CACHE[key] = (time.time(), result['id'])
+        if key is not None:
+            CACHE[key] = (time.time(), result['id'])
         while len(SNAPSHOTS) > MAX_SNAPSHOTS:
             SNAPSHOTS.popitem(last=False)
         for old_key, (_, token) in list(CACHE.items()):
@@ -226,7 +231,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(content)))
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
-        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
         for key, value in (extra or {}).items():
             self.send_header(key, value)
         self.end_headers()
@@ -238,6 +243,27 @@ class Handler(BaseHTTPRequestHandler):
     def json_response(self, status, obj):
         self.send_content(status, json.dumps(obj, ensure_ascii=False, allow_nan=False).encode(),
                           'application/json; charset=utf-8')
+
+    def do_POST(self):
+        # Browser transport fallback; validation, normalisation and CSV stay in Python.
+        if urlsplit(self.path).path != '/api/import':
+            self.json_response(404, {'error': 'Không tìm thấy trang.'})
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 4_000_000:
+                raise InputError('Dung lượng dữ liệu không hợp lệ.')
+            if self.headers.get_content_type() != 'application/json':
+                raise InputError('Yêu cầu dữ liệu JSON.')
+            payload = json.loads(self.rfile.read(length))
+            params = parse_inputs({k: [v] for k, v in payload['params'].items()})
+            result = normalise(payload['data'], params)
+            if len(result['rows']) > 24 * 109:
+                raise InputError('Số dòng dữ liệu vượt giới hạn.')
+            result['meta']['source'] = 'Open-Meteo Forecast API (browser transport; Python processing)'
+            self.json_response(200, save_snapshot(result))
+        except (InputError, WeatherError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            self.json_response(400, {'error': 'Dữ liệu dự phòng không hợp lệ: ' + str(exc)})
 
     def do_GET(self):
         path = urlsplit(self.path)

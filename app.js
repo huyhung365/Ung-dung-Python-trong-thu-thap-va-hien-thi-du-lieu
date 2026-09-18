@@ -102,12 +102,13 @@ async function directWeatherFallback(params, signal) {
   const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, {signal});
   const raw = await response.json();
   if (!response.ok || raw.error) throw new Error(raw.reason || 'Open-Meteo không thể cung cấp dữ liệu.');
-  const zone = raw.timezone, now = new Date();
-  const day = d => new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
-  const today = day(now), h = raw.hourly;
-  const keys = ['temperature_2m','relative_humidity_2m','shortwave_radiation'];
-  const rows = h.time.map((stamp,i) => {const d=new Date(stamp*1000), row={timestamp:stamp,time_utc:d.toISOString(),period:day(d)<today?'past_model':'forecast'}; keys.forEach(k=>row[k]=h[k][i]); return row;});
-  return {rows, meta:{requested:{latitude:Number(params.get('latitude')),longitude:Number(params.get('longitude')),past_days:Number(params.get('past_days')),forecast_days:Number(params.get('forecast_days'))},timezone:zone,grid_latitude:raw.latitude,grid_longitude:raw.longitude,fetched_at_utc:new Date().toISOString(),source:'Open-Meteo Forecast API (browser fallback)',missing_values:rows.reduce((n,r)=>n+keys.filter(k=>r[k]==null).length,0)}};
+  const saved = await fetch('/api/import', {
+    method:'POST', headers:{'Content-Type':'application/json'}, signal,
+    body:JSON.stringify({params:Object.fromEntries(params),data:raw}),
+  });
+  const snapshot = await saved.json();
+  if (!saved.ok) throw new Error(snapshot.error || 'Python không xử lý được dữ liệu dự phòng.');
+  return snapshot;
 }
 async function loadData(event) {
   event?.preventDefault(); if (!$('query-form').reportValidity()) return;
@@ -127,7 +128,14 @@ async function loadData(event) {
     const response=await fetch(`/api/weather?${params}`,{signal:controller.signal});
     let data=await response.json();
     if(!response.ok) {
-      if(response.status===502 && /giới hạn|lượt truy cập/i.test(data.error||'')) data=await directWeatherFallback(params,controller.signal);
+      if(response.status===502 && /giới hạn|lượt truy cập/i.test(data.error||'')) {
+        $('status').textContent='Đang lấy dữ liệu dự phòng và xử lý bằng Python…';
+        try { data=await directWeatherFallback(params,controller.signal); }
+        catch (fallbackError) {
+          if (fallbackError.name === 'AbortError') throw fallbackError;
+          throw new Error(`${data.error} Nguồn dự phòng cũng chưa kết nối được: ${fallbackError.message}`);
+        }
+      }
       else throw new Error(data.error||'Không tải được dữ liệu.');
     }
     if(requestId !== weatherRequest) return;
