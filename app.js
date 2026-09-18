@@ -112,7 +112,8 @@ async function loadData(event) {
   $('submit').textContent='Đang lấy dữ liệu…';$('status').textContent='Đang kết nối Open-Meteo…';
   const controller=new AbortController();weatherController=controller;const timer=setTimeout(()=>controller.abort(),45000);
   try {
-    const data=await WeatherAPI.weather(params, controller.signal);
+    const response=await fetch(`/api/weather?${params}`,{signal:controller.signal});
+    const data=await response.json(); if(!response.ok) throw new Error(data.error||'Không tải được dữ liệu.');
     if(requestId !== weatherRequest) return;
     data.placeLabel=placeLabel;snapshot=data;render();
   } catch(error) {
@@ -130,7 +131,9 @@ $('download').addEventListener('click',async()=>{
   const selected = snapshot;
   $('download').disabled=true;
   try {
-    const blob=new Blob([WeatherAPI.csv(selected)], {type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    const response=await fetch(`/api/export?id=${encodeURIComponent(selected.id)}`);
+    if(!response.ok) throw new Error((await response.json()).error);
+    const blob=await response.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=`weather_${selected.meta.requested.latitude}_${selected.meta.requested.longitude}.csv`;
     document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   } catch(error) {$('error').textContent=error.message;$('error').hidden=false;}
@@ -149,7 +152,9 @@ $('location-form').addEventListener('submit', async event => {
   $('search-place').disabled = true;
   $('place-status').textContent = 'Đang tìm địa điểm…';
   try {
-    const data = await WeatherAPI.locations(name, controller.signal);
+    const response = await fetch(`/api/locations?name=${encodeURIComponent(name)}`, {signal:controller.signal});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Không tìm được địa điểm.');
     if (requestId !== placeSearchRequest) return;
     placeResults = data.results;
     $('place-select').replaceChildren(new Option('— Chọn địa điểm —', ''));

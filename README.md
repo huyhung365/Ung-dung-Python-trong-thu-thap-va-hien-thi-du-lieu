@@ -1,31 +1,39 @@
-# Weather Lab — GitHub Pages
+# Weather Lab bằng Python
 
-Website thời tiết tiếng Việt, chạy bằng HTML/CSS/JavaScript. Giữ tìm địa điểm Việt Nam, nhập tọa độ, biểu đồ, bảng phân trang và tải CSV. Không cần Python, máy chủ riêng hoặc API key.
+Bản này giữ giao diện đã duyệt và chuyển việc tìm địa điểm, thu thập dữ liệu Open-Meteo, kiểm tra dữ liệu, phân loại quá khứ/dự báo, lưu đệm và tạo CSV về máy chủ Python trong `app.py`.
 
-## Đưa web lên GitHub
+JavaScript vẫn cần để nhận thao tác, vẽ biểu đồ, tính các chỉ số hiển thị và phân trang. Trình duyệt gọi `/api/locations`, `/api/weather` và `/api/export`; không gọi Open-Meteo trực tiếp.
 
-1. Tạo repository Public trên GitHub, ví dụ `weather-project`.
-2. Chọn **Add file → Upload files**. Tải toàn bộ nội dung thư mục này lên repository, để `index.html` nằm ngay ở thư mục gốc. Không tải file ZIP lên thay cho mã nguồn.
-3. Chọn **Commit changes**.
-4. Mở **Settings → Pages → Build and deployment**.
-5. Ở **Source**, chọn **Deploy from a branch**; chọn nhánh **main**, thư mục **/(root)** rồi **Save**.
-6. Đợi GitHub triển khai. Link website hiển thị trong Settings → Pages, thường là `https://TEN-GITHUB.github.io/weather-project/`.
+## Chạy trên máy
 
-Khi cập nhật các file trên nhánh đã chọn, GitHub Pages sẽ triển khai lại.
+Cài Python 3.10 trở lên. Mở terminal tại thư mục này rồi chạy:
 
-Hướng dẫn chính thức: https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site
+```sh
+python app.py
+```
 
-## Chạy thử
+Mở http://localhost:8000. Trên Windows có thể chạy `start_windows.bat`.
 
-Mở `index.html` bằng trình duyệt hiện đại, có kết nối Internet. Hoặc chạy máy chủ tĩnh từ thư mục này: `python -m http.server 8000`, rồi mở `http://localhost:8000`.
+Chia sẻ trong cùng mạng LAN: `python app.py --lan`. Thiết bị khác dùng địa chỉ IP được in trong terminal. Máy chủ cần Internet để lấy dữ liệu thời tiết.
 
-## Cách hoạt động
+## Chạy online trên Render
 
-- `weather-api.js` gọi trực tiếp Open-Meteo, kiểm tra dữ liệu, lưu đệm trong phiên tối đa 10 phút và tạo CSV từ đúng bộ dữ liệu đang hiển thị.
-- `app.js` quản lý giao diện, biểu đồ, phân trang và hủy yêu cầu cũ khi thay đổi tìm kiếm.
-- Đường dẫn tài nguyên tương đối nên dùng được cả website gốc lẫn website trong thư mục repository.
-- CSV có UTF-8 BOM để Excel đọc tiếng Việt; giá trị thiếu để trống và thời gian xuất theo UTC kèm tên múi giờ.
-- Dữ liệu quá khứ là dữ liệu mô hình, không phải đo trực tiếp. API công cộng có thể giới hạn truy cập; trang sẽ báo lỗi khi yêu cầu thất bại.
-- Bản này đã chuyển phần xử lý Python sang JavaScript. Nếu bài nộp yêu cầu có Python, cần giữ riêng bản dự án Python gốc.
+Đưa nội dung thư mục này lên một nhánh hoặc repository dành cho bản Python. Tạo Web Service Python trên Render từ repository đó:
 
-Nguồn: https://open-meteo.com/en/docs — địa danh: https://www.geonames.org/.
+- Build Command: `python -m pip install -r requirements.txt`
+- Start Command: `python app.py --lan --port $PORT`
+- Health Check Path: `/`
+
+File `render.yaml` cũng có cấu hình Blueprint tương ứng. Kiểm tra gói dịch vụ trong giao diện Render trước khi tạo. Bản này chưa được triển khai chỉ bằng việc tải mã nguồn.
+
+GitHub lưu mã nguồn; Render chạy tiến trình Python. Không dùng GitHub Pages để chạy `app.py`.
+
+Tài liệu: https://render.com/docs/web-services
+
+## Kiểm tra
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+Đây là máy chủ Python standard library phục vụ đồ án/demo. Cache và phiên xuất CSV nằm trong bộ nhớ của một tiến trình; khởi động lại sẽ xóa chúng. Nếu mở rộng cho lượng truy cập lớn, cần máy chủ ứng dụng và lưu trữ phù hợp.
